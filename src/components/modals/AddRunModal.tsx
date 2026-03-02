@@ -264,7 +264,7 @@ export function AddRunModal({ open, onClose, existingRunId }: AddRunModalProps) 
                     {/* 3 Column Grid for Stages */}
                     <Grid container spacing={3}>
                         {STAGES.map(stage => (
-                            <Grid item xs={12} md={4} key={stage}>
+                            <Grid size={{ xs: 12, md: 4 }} key={stage}>
                                 <Paper variant="outlined" sx={{ p: 2, height: '100%', backgroundColor: 'background.default' }}>
                                     <Typography variant="subtitle1" fontWeight="bold" gutterBottom>{stage}</Typography>
 

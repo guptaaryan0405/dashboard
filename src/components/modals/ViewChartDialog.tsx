@@ -29,7 +29,7 @@ export function ViewChartDialog({ open, config, onClose }: ViewChartDialogProps)
             </DialogTitle>
             <DialogContent sx={{ p: 4 }}>
                 {/* We pass a dummy onRemove handler because the ChartWidget doesn't need to delete itself from global state anymore */}
-                <ChartWidget config={config} runs={runs} onRemove={onClose} />
+                <ChartWidget config={config} runs={runs} />
             </DialogContent>
         </Dialog>
     );

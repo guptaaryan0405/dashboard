@@ -39,7 +39,7 @@ export function AutoLoadSettingsDialog({ open, onClose }: AutoLoadSettingsDialog
                 // Prefer the user pasted path if it exists, else default to genuine file name
                 const displayPath = pathInput.trim() !== '' ? pathInput : file.name;
 
-                setAutoRefresh({ path: displayPath, lastRefreshTime: Date.now() }, file, handle);
+                setAutoRefresh({ path: displayPath, lastRefreshTime: Date.now(), refreshIntervalMinutes: autoConfig.refreshIntervalMinutes || 30 }, file, handle);
                 setPathInput(displayPath);
                 await parseAndLoadFile(file);
             } catch (err) {
@@ -56,7 +56,7 @@ export function AutoLoadSettingsDialog({ open, onClose }: AutoLoadSettingsDialog
         if (!file) return;
 
         const displayPath = pathInput.trim() !== '' ? pathInput : file.name;
-        setAutoRefresh({ path: displayPath, lastRefreshTime: Date.now() }, file, null);
+        setAutoRefresh({ path: displayPath, lastRefreshTime: Date.now(), refreshIntervalMinutes: autoConfig.refreshIntervalMinutes || 30 }, file, null);
         setPathInput(displayPath);
         await parseAndLoadFile(file);
 
@@ -120,7 +120,7 @@ export function AutoLoadSettingsDialog({ open, onClose }: AutoLoadSettingsDialog
         } else if (pathInput) {
             const success = await parseAndLoadDirectPath(pathInput);
             if (success) {
-                setAutoRefresh({ path: pathInput, lastRefreshTime: Date.now() }, null, null);
+                setAutoRefresh({ path: pathInput, lastRefreshTime: Date.now(), refreshIntervalMinutes: autoConfig.refreshIntervalMinutes || 30 }, null, null);
             } else {
                 alert("Could not refresh from the provided path. Please re-select the file.");
             }
@@ -198,7 +198,7 @@ export function AutoLoadSettingsDialog({ open, onClose }: AutoLoadSettingsDialog
                         if (pathInput && pathInput !== autoConfig.path) {
                             const success = await parseAndLoadDirectPath(pathInput);
                             if (success) {
-                                setAutoRefresh({ path: pathInput, lastRefreshTime: Date.now() }, null, null);
+                                setAutoRefresh({ path: pathInput, lastRefreshTime: Date.now(), refreshIntervalMinutes: autoConfig.refreshIntervalMinutes || 30 }, null, null);
                                 onClose();
                             } else {
                                 alert("Failed to read the file at that path natively. Ensure the path is correct or try using 'Browse'.");
@@ -208,7 +208,7 @@ export function AutoLoadSettingsDialog({ open, onClose }: AutoLoadSettingsDialog
                         else if (pathInput && !fileRef && !fileHandle) {
                             const success = await parseAndLoadDirectPath(pathInput);
                             if (success) {
-                                setAutoRefresh({ path: pathInput, lastRefreshTime: Date.now() }, null, null);
+                                setAutoRefresh({ path: pathInput, lastRefreshTime: Date.now(), refreshIntervalMinutes: autoConfig.refreshIntervalMinutes || 30 }, null, null);
                                 onClose();
                             } else {
                                 alert("Failed to read the file at that path natively. Ensure the path is correct or try using 'Browse'.");

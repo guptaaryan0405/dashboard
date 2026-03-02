@@ -9,9 +9,7 @@ export function RunGrid() {
 
     const filteredRuns = useMemo(() => {
         return runs.filter((run) => {
-            if (filters.searchQuery && !run.run_tag.toLowerCase().includes(filters.searchQuery.toLowerCase())) {
-                return false;
-            }
+            // Search query filtering was moved to RunGridToolbar
 
             const hasAnySelectedStage = Object.entries(filters.stages)
                 .filter(([, isChecked]) => isChecked)
