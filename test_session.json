@@ -1,0 +1,22 @@
+[
+    {
+        "id": "pnr_tag17_76Dx_4p7ghz",
+        "run_tag": "pnr_tag17_76Dx_4p7ghz",
+        "frequency_ghz": 4.7,
+        "stages": {
+            "PRECTS": {
+                "stage": "PRECTS",
+                "views": {
+                    "all": {
+                        "WNS": -0.05,
+                        "TNS": -2.4
+                    },
+                    "reg2reg": {
+                        "WNS": -0.01,
+                        "TNS": -0.1
+                    }
+                }
+            }
+        }
+    }
+]
