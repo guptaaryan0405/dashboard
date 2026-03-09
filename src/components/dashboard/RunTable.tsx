@@ -5,7 +5,7 @@ import {
     ToggleButtonGroup, ToggleButton, Checkbox, Tooltip, Popover, TextField, Badge
 } from '@mui/material';
 import React from 'react';
-import { Delete, Insights, CompareArrows, FilterList } from '@mui/icons-material';
+import { Delete, Insights, CompareArrows, FilterList, Visibility } from '@mui/icons-material';
 import { useRunStore } from '../../store/useRunStore';
 import type { StageName } from '../../types';
 import { PathGroupDialog } from '../modals/PathGroupDialog';
@@ -45,6 +45,15 @@ export function RunTable({ onEditRun }: RunTableProps) {
     const [filterAnchorEl, setFilterAnchorEl] = useState<HTMLButtonElement | null>(null);
     const [tagFilter, setTagFilter] = useState('');
     const [freqFilter, setFreqFilter] = useState('');
+    const [viewOnlyFilter, setViewOnlyFilter] = useState('');
+
+    const handleSetViewOnly = () => {
+        const selectedRuns = selectedRunIds.map(id => runs.find(r => r.id === id)?.run_tag).filter(Boolean);
+        if (selectedRuns.length > 0) {
+            setViewOnlyFilter(selectedRuns.join(', '));
+            setSelectedRunIds([]);
+        }
+    };
 
     const handleSelectAllClick = (event: React.ChangeEvent<HTMLInputElement>) => {
         if (event.target.checked) {
@@ -131,7 +140,7 @@ export function RunTable({ onEditRun }: RunTableProps) {
     if (runs.length === 0) return null;
 
     // Apply Filters
-    const displayRuns = runs.filter(run => {
+    let displayRuns = runs.filter(run => {
         if (tagFilter) {
             try {
                 const regex = new RegExp(tagFilter, 'i');
@@ -148,8 +157,20 @@ export function RunTable({ onEditRun }: RunTableProps) {
         return true;
     });
 
+    if (viewOnlyFilter.trim() !== '') {
+        const viewTags = viewOnlyFilter.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+        if (viewTags.length > 0) {
+            displayRuns = displayRuns.filter(r => viewTags.includes(r.run_tag.toLowerCase()));
+            displayRuns.sort((a, b) => {
+                const indexA = viewTags.indexOf(a.run_tag.toLowerCase());
+                const indexB = viewTags.indexOf(b.run_tag.toLowerCase());
+                return indexA - indexB;
+            });
+        }
+    }
+
     const numSelected = selectedRunIds.length;
-    const activeFilterCount = (tagFilter ? 1 : 0) + (freqFilter ? 1 : 0);
+    const activeFilterCount = (tagFilter ? 1 : 0) + (freqFilter ? 1 : 0) + (viewOnlyFilter ? 1 : 0);
 
     return (
         <Box sx={{ width: '100%', mb: 4 }}>
@@ -169,6 +190,11 @@ export function RunTable({ onEditRun }: RunTableProps) {
                         <Tooltip title="Generate Graph">
                             <IconButton onClick={() => setAddChartModalOpen(true)} sx={{ color: 'primary.contrastText' }}>
                                 <Insights />
+                            </IconButton>
+                        </Tooltip>
+                        <Tooltip title="View Only Selected">
+                            <IconButton onClick={handleSetViewOnly} sx={{ color: 'primary.contrastText' }}>
+                                <Visibility />
                             </IconButton>
                         </Tooltip>
                         <Tooltip title="Compare Intermediate Runs">
@@ -439,6 +465,13 @@ export function RunTable({ onEditRun }: RunTableProps) {
                         value={freqFilter}
                         onChange={(e) => setFreqFilter(e.target.value)}
                         placeholder="e.g. 4.7"
+                    />
+                    <TextField
+                        size="small"
+                        label="View Only (Comma separated tags)"
+                        value={viewOnlyFilter}
+                        onChange={(e) => setViewOnlyFilter(e.target.value)}
+                        placeholder="e.g. run1, run2, run3"
                     />
                 </Box>
             </Popover>
