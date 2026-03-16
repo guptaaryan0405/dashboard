@@ -5,7 +5,7 @@ import {
     ToggleButtonGroup, ToggleButton, Checkbox, Tooltip, Popover, TextField, Badge
 } from '@mui/material';
 import React from 'react';
-import { Delete, Insights, CompareArrows, FilterList, Visibility } from '@mui/icons-material';
+import { Delete, Insights, CompareArrows, FilterList, Visibility, Deselect } from '@mui/icons-material';
 import { useRunStore } from '../../store/useRunStore';
 import type { StageName, Run, StageData } from '../../types';
 import { PathGroupDialog } from '../modals/PathGroupDialog';
@@ -227,6 +227,11 @@ export function RunTable({ onEditRun }: RunTableProps) {
                                 <CompareArrows />
                             </IconButton>
                         </Tooltip>
+                        <Tooltip title="Clear Selection">
+                            <IconButton onClick={() => setSelectedRunIds([])} sx={{ color: 'primary.contrastText' }}>
+                                <Deselect />
+                            </IconButton>
+                        </Tooltip>
                         <Tooltip title="Delete">
                             <IconButton onClick={handleDeleteSelected} sx={{ color: 'primary.contrastText' }}>
                                 <Delete />
@@ -265,7 +270,7 @@ export function RunTable({ onEditRun }: RunTableProps) {
             </Box>
 
             <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 'calc(100vh - 200px)' }}>
-                <Table stickyHeader size="small" sx={{ minWidth: 800 }}>
+                <Table stickyHeader size="small" sx={{ minWidth: 800, tableLayout: 'auto' }}>
                     <TableHead>
                         <TableRow>
                             <TableCell padding="checkbox" rowSpan={['timing', 'area', 'drcs', 'cell_count'].includes(viewMode) ? 2 : 1} sx={{ backgroundColor: 'background.paper' }}>
@@ -276,8 +281,8 @@ export function RunTable({ onEditRun }: RunTableProps) {
                                     onChange={handleSelectAllClick}
                                 />
                             </TableCell>
-                            <TableCell rowSpan={['timing', 'area', 'drcs', 'cell_count'].includes(viewMode) ? 2 : 1} sx={{ minWidth: 150, fontWeight: 'bold', backgroundColor: 'background.paper' }}>Run Tag</TableCell>
-                            <TableCell rowSpan={['timing', 'area', 'drcs', 'cell_count'].includes(viewMode) ? 2 : 1} sx={{ backgroundColor: 'background.paper', whiteSpace: 'nowrap' }}>Freq (GHz)</TableCell>
+                            <TableCell rowSpan={['timing', 'area', 'drcs', 'cell_count'].includes(viewMode) ? 2 : 1} sx={{ minWidth: 150, fontWeight: 'bold', backgroundColor: 'background.paper', resize: 'horizontal', overflow: 'hidden', cursor: 'col-resize' }}>Run Tag</TableCell>
+                            <TableCell rowSpan={['timing', 'area', 'drcs', 'cell_count'].includes(viewMode) ? 2 : 1} sx={{ backgroundColor: 'background.paper', whiteSpace: 'nowrap', resize: 'horizontal', overflow: 'hidden', cursor: 'col-resize' }}>Freq (GHz)</TableCell>
 
                             {STAGES.map(stage => {
                                 let colSpan = 1;
