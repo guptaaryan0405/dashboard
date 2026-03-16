@@ -61,3 +61,6 @@ For each stage, picks newest by mtime among:
 
 ## Notes to Update
 Whenever new fields are added or parsing changes, update this file.
+
+## Atomic Writes
+Scraper writes JSON to a temp file and `os.replace()` to avoid partial reads while the file is being updated.

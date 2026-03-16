@@ -1,4 +1,4 @@
-export type StageName = 'PRECTS' | 'CTS' | 'POSTROUTE';
+export type StageName = 'PRECTS' | 'CTS' | 'ROUTE' | 'POSTROUTE';
 export type PathGroupName = string; // e.g., 'all', 'reg2reg', 'default', 'In2reg', etc.
 
 export interface TimingMetrics {
@@ -12,7 +12,14 @@ export interface TimingMetrics {
 export interface StageLevelMetrics {
     area_mm2?: number;
     leakage_mw?: number;
+    density_pct?: number;
     drc_count?: number;
+    drc_shorts?: number;
+    drc_total?: number;
+    clock_buffer_count?: number;
+    clock_inverter_count?: number;
+    clock_icg_count?: number;
+    clock_cell_area_um2?: number;
 }
 
 export type ViewMetrics = Record<PathGroupName, TimingMetrics>;
@@ -37,6 +44,7 @@ export interface StageData {
     stage: StageName;
     source_log?: string;
     status?: string;
+    error_list?: string[];
     last_updated?: string;
     views?: Partial<ViewMetrics>;
     intermediate?: IntermediateData[];

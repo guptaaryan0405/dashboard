@@ -15,7 +15,7 @@ interface CompareRunsDialogProps {
     initialSelectedRunIds?: string[];
 }
 
-const STAGES: StageName[] = ['PRECTS', 'CTS', 'POSTROUTE'];
+const STAGES: StageName[] = ['PRECTS', 'CTS', 'ROUTE', 'POSTROUTE'];
 
 const ITEM_HEIGHT = 48;
 const ITEM_PADDING_TOP = 8;

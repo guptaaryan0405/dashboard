@@ -5,7 +5,7 @@ interface RunCardProps {
     run: Run;
 }
 
-const STAGES: StageName[] = ['PRECTS', 'CTS', 'POSTROUTE'];
+const STAGES: StageName[] = ['PRECTS', 'CTS', 'ROUTE', 'POSTROUTE'];
 
 function StageTable({ stageData, stageName }: { stageData?: StageData; stageName: StageName }) {
     if (!stageData) {

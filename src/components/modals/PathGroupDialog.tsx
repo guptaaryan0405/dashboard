@@ -8,7 +8,7 @@ interface PathGroupDialogProps {
     onClose: () => void;
 }
 
-const STAGES: StageName[] = ['PRECTS', 'CTS', 'POSTROUTE'];
+const STAGES: StageName[] = ['PRECTS', 'CTS', 'ROUTE', 'POSTROUTE'];
 
 export function PathGroupDialog({ runId, onClose }: PathGroupDialogProps) {
     const run = useRunStore(state => state.runs.find(r => r.id === runId));

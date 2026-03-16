@@ -7,14 +7,15 @@ import {
 import React from 'react';
 import { Delete, Insights, CompareArrows, FilterList, Visibility } from '@mui/icons-material';
 import { useRunStore } from '../../store/useRunStore';
-import type { StageName } from '../../types';
+import type { StageName, Run, StageData } from '../../types';
 import { PathGroupDialog } from '../modals/PathGroupDialog';
 import { CompareRunsDialog } from '../modals/CompareRunsDialog';
+import { ErrorLogsDialog } from '../modals/ErrorLogsDialog';
 import { AddChartModal } from '../modals/AddChartModal';
 import { ViewChartDialog } from '../modals/ViewChartDialog';
 import type { ChartConfig } from '../../types';
 
-const STAGES: StageName[] = ['PRECTS', 'CTS', 'POSTROUTE'];
+const STAGES: StageName[] = ['PRECTS', 'CTS', 'ROUTE', 'POSTROUTE'];
 
 interface RunTableProps {
     onEditRun: (runId: string) => void;
@@ -30,14 +31,14 @@ export function RunTable({ onEditRun }: RunTableProps) {
         mouseY: number;
         runId: string;
     } | null>(null);
-
     const [pathGroupDialogRunId, setPathGroupDialogRunId] = useState<string | null>(null);
-    const [compareRunsDialogOpen, setCompareRunsDialogOpen] = useState<boolean>(false);
+    const [errorLogsRunId, setErrorLogsRunId] = useState<string | null>(null);
+    const [compareRunsDialogOpen, setCompareRunsDialogOpen] = useState(false);
     const [addChartModalOpen, setAddChartModalOpen] = useState<boolean>(false);
     const [viewChartConfig, setViewChartConfig] = useState<ChartConfig | null>(null);
 
     // Phase 7 UX
-    const [viewMode, setViewMode] = useState<'timing' | 'run_times' | 'area' | 'power'>('timing');
+    const [viewMode, setViewMode] = useState<'timing' | 'run_times' | 'area' | 'power' | 'drcs' | 'cell_count'>('timing');
     const [selectedRunIds, setSelectedRunIds] = useState<string[]>([]);
     const { deleteRun } = useRunStore();
 
@@ -130,6 +131,12 @@ export function RunTable({ onEditRun }: RunTableProps) {
         setViewChartConfig(config);
     };
 
+    const handleViewModeChange = (_: React.MouseEvent<HTMLElement>, newMode: 'timing' | 'run_times' | 'area' | 'power' | 'drcs' | 'cell_count' | null) => {
+        if (newMode !== null) {
+            setViewMode(newMode);
+        }
+    };
+
     // Scroll into view when selected node changes
     useEffect(() => {
         if (selectedRunId && rowRefs.current[selectedRunId]) {
@@ -157,6 +164,21 @@ export function RunTable({ onEditRun }: RunTableProps) {
         return true;
     });
 
+    // Helper: get the most recent last_updated timestamp across all stages of a run
+    const getLatestTimestamp = (run: Run): number => {
+        let latest = 0;
+        if (run.stages) {
+            for (const stageData of Object.values(run.stages)) {
+                const sd = stageData as StageData | undefined;
+                if (sd?.last_updated) {
+                    const ts = new Date(sd.last_updated).getTime();
+                    if (ts > latest) latest = ts;
+                }
+            }
+        }
+        return latest;
+    };
+
     if (viewOnlyFilter.trim() !== '') {
         const viewTags = viewOnlyFilter.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
         if (viewTags.length > 0) {
@@ -167,6 +189,9 @@ export function RunTable({ onEditRun }: RunTableProps) {
                 return indexA - indexB;
             });
         }
+    } else {
+        // Default sort: most recently updated runs on top
+        displayRuns.sort((a, b) => getLatestTimestamp(b) - getLatestTimestamp(a));
     }
 
     const numSelected = selectedRunIds.length;
@@ -221,18 +246,19 @@ export function RunTable({ onEditRun }: RunTableProps) {
                             </Tooltip>
                         </Box>
                         <ToggleButtonGroup
+                            size="small"
                             color="primary"
                             value={viewMode}
                             exclusive
-                            onChange={(_, newMode) => {
-                                if (newMode !== null) setViewMode(newMode);
-                            }}
-                            size="small"
+                            onChange={handleViewModeChange}
+                            aria-label="View Mode"
                         >
-                            <ToggleButton value="timing">Timing</ToggleButton>
-                            <ToggleButton value="run_times">Run Times</ToggleButton>
-                            <ToggleButton value="area">Area</ToggleButton>
-                            <ToggleButton value="power">Power</ToggleButton>
+                            <ToggleButton value="timing" aria-label="timing">Timing</ToggleButton>
+                            <ToggleButton value="run_times" aria-label="run_times">Run Times</ToggleButton>
+                            <ToggleButton value="area" aria-label="area">Area</ToggleButton>
+                            <ToggleButton value="power" aria-label="power">Power</ToggleButton>
+                            <ToggleButton value="drcs" aria-label="drcs">DRCs</ToggleButton>
+                            <ToggleButton value="cell_count" aria-label="cell_count">Cell Count</ToggleButton>
                         </ToggleButtonGroup>
                     </>
                 )}
@@ -242,7 +268,7 @@ export function RunTable({ onEditRun }: RunTableProps) {
                 <Table stickyHeader size="small" sx={{ minWidth: 800 }}>
                     <TableHead>
                         <TableRow>
-                            <TableCell padding="checkbox" rowSpan={viewMode === 'timing' ? 2 : 1} sx={{ backgroundColor: 'background.paper' }}>
+                            <TableCell padding="checkbox" rowSpan={['timing', 'area', 'drcs', 'cell_count'].includes(viewMode) ? 2 : 1} sx={{ backgroundColor: 'background.paper' }}>
                                 <Checkbox
                                     color="primary"
                                     indeterminate={numSelected > 0 && numSelected < runs.length}
@@ -250,27 +276,73 @@ export function RunTable({ onEditRun }: RunTableProps) {
                                     onChange={handleSelectAllClick}
                                 />
                             </TableCell>
-                            <TableCell rowSpan={viewMode === 'timing' ? 2 : 1} sx={{ minWidth: 150, fontWeight: 'bold', backgroundColor: 'background.paper' }}>Run Tag</TableCell>
-                            <TableCell rowSpan={viewMode === 'timing' ? 2 : 1} sx={{ backgroundColor: 'background.paper', whiteSpace: 'nowrap' }}>Freq (GHz)</TableCell>
+                            <TableCell rowSpan={['timing', 'area', 'drcs', 'cell_count'].includes(viewMode) ? 2 : 1} sx={{ minWidth: 150, fontWeight: 'bold', backgroundColor: 'background.paper' }}>Run Tag</TableCell>
+                            <TableCell rowSpan={['timing', 'area', 'drcs', 'cell_count'].includes(viewMode) ? 2 : 1} sx={{ backgroundColor: 'background.paper', whiteSpace: 'nowrap' }}>Freq (GHz)</TableCell>
 
-                            {STAGES.map(stage => (
-                                <TableCell
-                                    key={stage}
-                                    colSpan={viewMode === 'timing' ? 2 : 1}
-                                    align="center"
-                                    sx={{ borderLeft: '1px solid', borderColor: 'divider', fontWeight: 'bold', backgroundColor: 'background.paper' }}
-                                >
-                                    {stage} {viewMode === 'timing' ? '(all)' : ''}
-                                </TableCell>
-                            ))}
+                            {STAGES.map(stage => {
+                                let colSpan = 1;
+                                if (viewMode === 'timing') colSpan = 3;
+                                else if (viewMode === 'area') colSpan = 2;
+                                else if (viewMode === 'drcs' && (stage === 'ROUTE' || stage === 'POSTROUTE')) colSpan = 2;
+                                else if (viewMode === 'cell_count') colSpan = 3;
+
+                                return (
+                                    <TableCell
+                                        key={stage}
+                                        colSpan={colSpan}
+                                        align="center"
+                                        sx={{ borderLeft: '1px solid', borderColor: 'divider', fontWeight: 'bold', backgroundColor: 'background.paper' }}
+                                    >
+                                        {stage} {viewMode === 'timing' ? '(all)' : ''}
+                                    </TableCell>
+                                );
+                            })}
                         </TableRow>
 
                         {viewMode === 'timing' && (
                             <TableRow>
                                 {STAGES.map((stage) => (
-                                    <React.Fragment key={`${stage}-headers`}>
+                                    <React.Fragment key={`${stage}-headers-timing`}>
                                         <TableCell align="center" sx={{ borderLeft: '1px solid', borderColor: 'divider', backgroundColor: 'background.paper', fontSize: '0.8rem' }}>WNS</TableCell>
                                         <TableCell align="center" sx={{ borderColor: 'divider', backgroundColor: 'background.paper', fontSize: '0.8rem' }}>TNS</TableCell>
+                                        <TableCell align="center" sx={{ borderColor: 'divider', backgroundColor: 'background.paper', fontSize: '0.8rem' }}>FEP</TableCell>
+                                    </React.Fragment>
+                                ))}
+                            </TableRow>
+                        )}
+                        {viewMode === 'area' && (
+                            <TableRow>
+                                {STAGES.map((stage) => (
+                                    <React.Fragment key={`${stage}-headers-area`}>
+                                        <TableCell align="center" sx={{ borderLeft: '1px solid', borderColor: 'divider', backgroundColor: 'background.paper', fontSize: '0.8rem' }}>Area (mm²)</TableCell>
+                                        <TableCell align="center" sx={{ borderColor: 'divider', backgroundColor: 'background.paper', fontSize: '0.8rem' }}>Density (%)</TableCell>
+                                    </React.Fragment>
+                                ))}
+                            </TableRow>
+                        )}
+                        {viewMode === 'drcs' && (
+                            <TableRow>
+                                {STAGES.map((stage) => (
+                                    <React.Fragment key={`${stage}-headers-drcs`}>
+                                        {(stage === 'ROUTE' || stage === 'POSTROUTE') ? (
+                                            <>
+                                                <TableCell align="center" sx={{ borderLeft: '1px solid', borderColor: 'divider', backgroundColor: 'background.paper', fontSize: '0.8rem' }}>Shorts</TableCell>
+                                                <TableCell align="center" sx={{ borderColor: 'divider', backgroundColor: 'background.paper', fontSize: '0.8rem' }}>Total</TableCell>
+                                            </>
+                                        ) : (
+                                            <TableCell align="center" sx={{ borderLeft: '1px solid', borderColor: 'divider', backgroundColor: 'background.paper', fontSize: '0.8rem' }} />
+                                        )}
+                                    </React.Fragment>
+                                ))}
+                            </TableRow>
+                        )}
+                        {viewMode === 'cell_count' && (
+                            <TableRow>
+                                {STAGES.map((stage) => (
+                                    <React.Fragment key={`${stage}-headers-cellcount`}>
+                                        <TableCell align="center" sx={{ borderLeft: '1px solid', borderColor: 'divider', backgroundColor: 'background.paper', fontSize: '0.8rem' }}>Buffers</TableCell>
+                                        <TableCell align="center" sx={{ borderColor: 'divider', backgroundColor: 'background.paper', fontSize: '0.8rem' }}>Inverters</TableCell>
+                                        <TableCell align="center" sx={{ borderColor: 'divider', backgroundColor: 'background.paper', fontSize: '0.8rem' }}>ICGs</TableCell>
                                     </React.Fragment>
                                 ))}
                             </TableRow>
@@ -309,35 +381,29 @@ export function RunTable({ onEditRun }: RunTableProps) {
                                         const status = stageData?.status;
 
                                         if (status && status !== 'completed') {
-                                            if (viewMode === 'timing') {
-                                                return (
-                                                    <TableCell
-                                                        key={`${run.id}-${stage}`}
-                                                        colSpan={2}
-                                                        align="center"
-                                                        sx={{
-                                                            borderLeft: '1px solid',
-                                                            borderColor: 'divider',
-                                                            color: status.toLowerCase() === 'error' || status.toLowerCase() === 'crash' || status.toLowerCase() === 'failed' ? 'error.main' : 'text.secondary',
-                                                            fontWeight: 'medium',
-                                                            fontStyle: 'italic',
-                                                            textTransform: 'capitalize'
-                                                        }}
-                                                    >
-                                                        {status}
-                                                    </TableCell>
-                                                );
-                                            } else {
-                                                return (
-                                                    <TableCell
-                                                        key={`${run.id}-${stage}`}
-                                                        align="center"
-                                                        sx={{ borderLeft: '1px solid', borderColor: 'divider', color: 'text.secondary', fontStyle: 'italic' }}
-                                                    >
-                                                        {status}
-                                                    </TableCell>
-                                                );
-                                            }
+                                            let errColSpan = 1;
+                                            if (viewMode === 'timing') errColSpan = 3;
+                                            else if (viewMode === 'area') errColSpan = 2;
+                                            else if (viewMode === 'drcs' && (stage === 'ROUTE' || stage === 'POSTROUTE')) errColSpan = 2;
+                                            else if (viewMode === 'cell_count') errColSpan = 3;
+
+                                            return (
+                                                <TableCell
+                                                    key={`${run.id}-${stage}`}
+                                                    colSpan={errColSpan}
+                                                    align="center"
+                                                    sx={{
+                                                        borderLeft: '1px solid',
+                                                        borderColor: 'divider',
+                                                        color: status.toLowerCase() === 'error' || status.toLowerCase() === 'crash' || status.toLowerCase() === 'failed' ? 'error.main' : 'text.secondary',
+                                                        fontWeight: 'medium',
+                                                        fontStyle: 'italic',
+                                                        textTransform: 'capitalize'
+                                                    }}
+                                                >
+                                                    {status}
+                                                </TableCell>
+                                            );
                                         }
 
                                         // Metric rendering logic based on active View Mode
@@ -345,8 +411,10 @@ export function RunTable({ onEditRun }: RunTableProps) {
                                             const metrics = stageData?.views?.['all'] || stageData?.views?.['All Paths'];
                                             const wns = metrics?.WNS ?? '—';
                                             const tns = metrics?.TNS ?? '—';
+                                            const fep = metrics?.violating_paths ?? metrics?.FEP ?? '—';
                                             const isWnsNegative = typeof wns === 'number' && wns < 0;
                                             const isTnsNegative = typeof tns === 'number' && tns < 0;
+                                            const isFepPositive = typeof fep === 'number' && fep > 0;
 
                                             return (
                                                 <React.Fragment key={`${run.id}-${stage}`}>
@@ -371,6 +439,16 @@ export function RunTable({ onEditRun }: RunTableProps) {
                                                     >
                                                         {tns}
                                                     </TableCell>
+                                                    <TableCell
+                                                        align="center"
+                                                        sx={{
+                                                            borderColor: 'divider',
+                                                            color: isFepPositive ? 'error.main' : 'inherit',
+                                                            fontWeight: isFepPositive ? 'medium' : 'normal'
+                                                        }}
+                                                    >
+                                                        {fep}
+                                                    </TableCell>
                                                 </React.Fragment>
                                             );
                                         } else if (viewMode === 'run_times') {
@@ -382,10 +460,16 @@ export function RunTable({ onEditRun }: RunTableProps) {
                                             );
                                         } else if (viewMode === 'area') {
                                             const area = stageData?.metrics?.area_mm2 ?? '—';
+                                            const density = stageData?.metrics?.density_pct ?? '—';
                                             return (
-                                                <TableCell key={`${run.id}-${stage}`} align="center" sx={{ borderLeft: '1px solid', borderColor: 'divider' }}>
-                                                    {area}
-                                                </TableCell>
+                                                <React.Fragment key={`${run.id}-${stage}`}>
+                                                    <TableCell align="center" sx={{ borderLeft: '1px solid', borderColor: 'divider' }}>
+                                                        {area}
+                                                    </TableCell>
+                                                    <TableCell align="center" sx={{ borderColor: 'divider' }}>
+                                                        {density}
+                                                    </TableCell>
+                                                </React.Fragment>
                                             );
                                         } else if (viewMode === 'power') {
                                             const leak = stageData?.metrics?.leakage_mw ?? '—';
@@ -393,6 +477,44 @@ export function RunTable({ onEditRun }: RunTableProps) {
                                                 <TableCell key={`${run.id}-${stage}`} align="center" sx={{ borderLeft: '1px solid', borderColor: 'divider' }}>
                                                     {leak}
                                                 </TableCell>
+                                            );
+                                        } else if (viewMode === 'drcs') {
+                                            if (stage === 'ROUTE' || stage === 'POSTROUTE') {
+                                                const shorts = stageData?.metrics?.drc_shorts ?? '—';
+                                                const total = stageData?.metrics?.drc_total ?? '—';
+                                                return (
+                                                    <React.Fragment key={`${run.id}-${stage}`}>
+                                                        <TableCell align="center" sx={{ borderLeft: '1px solid', borderColor: 'divider' }}>
+                                                            {shorts}
+                                                        </TableCell>
+                                                        <TableCell align="center" sx={{ borderColor: 'divider' }}>
+                                                            {total}
+                                                        </TableCell>
+                                                    </React.Fragment>
+                                                );
+                                            } else {
+                                                return (
+                                                    <TableCell key={`${run.id}-${stage}`} align="center" sx={{ borderLeft: '1px solid', borderColor: 'divider', color: 'text.secondary' }}>
+                                                        —
+                                                    </TableCell>
+                                                );
+                                            }
+                                        } else if (viewMode === 'cell_count') {
+                                            const buffers = stageData?.metrics?.clock_buffer_count ?? '—';
+                                            const inverters = stageData?.metrics?.clock_inverter_count ?? '—';
+                                            const icgs = stageData?.metrics?.clock_icg_count ?? '—';
+                                            return (
+                                                <React.Fragment key={`${run.id}-${stage}`}>
+                                                    <TableCell align="center" sx={{ borderLeft: '1px solid', borderColor: 'divider' }}>
+                                                        {buffers}
+                                                    </TableCell>
+                                                    <TableCell align="center" sx={{ borderColor: 'divider' }}>
+                                                        {inverters}
+                                                    </TableCell>
+                                                    <TableCell align="center" sx={{ borderColor: 'divider' }}>
+                                                        {icgs}
+                                                    </TableCell>
+                                                </React.Fragment>
                                             );
                                         }
                                         return null;
@@ -418,6 +540,12 @@ export function RunTable({ onEditRun }: RunTableProps) {
                 <MenuItem onClick={handleToggleGroups}>
                     Show All Path Groups
                 </MenuItem>
+                <MenuItem onClick={() => {
+                    if (contextMenu?.runId) setErrorLogsRunId(contextMenu.runId);
+                    handleCloseMenu();
+                }}>
+                    Show Error Logs
+                </MenuItem>
                 <Divider />
                 <MenuItem onClick={handleEditRun}>
                     Edit Run Data
@@ -425,6 +553,7 @@ export function RunTable({ onEditRun }: RunTableProps) {
             </Menu>
 
             <PathGroupDialog runId={pathGroupDialogRunId} onClose={() => setPathGroupDialogRunId(null)} />
+            <ErrorLogsDialog open={errorLogsRunId !== null} onClose={() => setErrorLogsRunId(null)} runData={runs.find(r => r.id === errorLogsRunId) || null} />
 
             {/* Contextual Modals triggered by Action Bar */}
             <CompareRunsDialog

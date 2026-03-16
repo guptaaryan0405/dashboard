@@ -36,10 +36,12 @@ export function AutoLoadSettingsDialog({ open, onClose }: AutoLoadSettingsDialog
                 });
 
                 const file = await handle.getFile();
-                // Prefer the user pasted path if it exists, else default to genuine file name
-                const displayPath = pathInput.trim() !== '' ? pathInput : file.name;
+                let displayPath = file.name;
+                if (pathInput.trim() !== '' && pathInput.trim() !== autoConfig.path && pathInput.endsWith(file.name)) {
+                    displayPath = pathInput.trim();
+                }
 
-                setAutoRefresh({ path: displayPath, lastRefreshTime: Date.now(), refreshIntervalMinutes: autoConfig.refreshIntervalMinutes || 30 }, file, handle);
+                setAutoRefresh({ path: displayPath, lastRefreshTime: Date.now(), refreshIntervalMinutes: autoConfig.refreshIntervalMinutes || 5 }, file, handle);
                 setPathInput(displayPath);
                 await parseAndLoadFile(file);
             } catch (err) {
@@ -55,8 +57,12 @@ export function AutoLoadSettingsDialog({ open, onClose }: AutoLoadSettingsDialog
         const file = event.target.files?.[0];
         if (!file) return;
 
-        const displayPath = pathInput.trim() !== '' ? pathInput : file.name;
-        setAutoRefresh({ path: displayPath, lastRefreshTime: Date.now(), refreshIntervalMinutes: autoConfig.refreshIntervalMinutes || 30 }, file, null);
+        let displayPath = file.name;
+        if (pathInput.trim() !== '' && pathInput.trim() !== autoConfig.path && pathInput.endsWith(file.name)) {
+            displayPath = pathInput.trim();
+        }
+
+        setAutoRefresh({ path: displayPath, lastRefreshTime: Date.now(), refreshIntervalMinutes: autoConfig.refreshIntervalMinutes || 5 }, file, null);
         setPathInput(displayPath);
         await parseAndLoadFile(file);
 
@@ -73,30 +79,45 @@ export function AutoLoadSettingsDialog({ open, onClose }: AutoLoadSettingsDialog
                 setLastRefreshTime(Date.now());
                 return true;
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error("Failed to parse auto-refresh file:", err);
-            alert("Could not load runs from the selected file. Ensure it is valid JSON.");
+            alert(`Could not load runs from the selected file. Error: ${err.message || String(err)}`);
             return false;
         }
     };
 
     const parseAndLoadDirectPath = async (path: string) => {
         try {
-            const fetchPath = path.startsWith('/') ? `/@fs${path}` : path;
+            let fetchPath = path;
+            if (!fetchPath.startsWith('/') && !fetchPath.startsWith('http')) {
+                // If it's just a filename, assume it lives in dashbaord_json
+                fetchPath = `/@fs/Users/arygup01/Library/CloudStorage/OneDrive-Arm/Documents/code/dashboard/dashbaord_json/${path}`;
+            } else if (fetchPath.startsWith('/')) {
+                fetchPath = `/@fs${path}`;
+            }
+
             const res = await fetch(fetchPath);
             if (!res.ok) throw new Error("Network response was not ok");
+
             const text = await res.text();
+
+            if (text.trim().startsWith('<')) {
+                throw new Error("Received HTML instead of JSON. The file path might be incorrect or inaccessible.");
+            }
+
             const importedRuns = JSON.parse(text);
             if (Array.isArray(importedRuns)) {
                 useRunStore.setState({ runs: importedRuns });
                 setLastRefreshTime(Date.now());
                 return true;
+            } else {
+                throw new Error("Parsed JSON is not an array of runs.");
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error("Failed to parse direct path:", err);
+            alert(`Could not load runs from the provided path. Error: ${err.message || String(err)}`);
             return false;
         }
-        return false;
     };
 
     const handleManualRefresh = async () => {
@@ -120,7 +141,7 @@ export function AutoLoadSettingsDialog({ open, onClose }: AutoLoadSettingsDialog
         } else if (pathInput) {
             const success = await parseAndLoadDirectPath(pathInput);
             if (success) {
-                setAutoRefresh({ path: pathInput, lastRefreshTime: Date.now(), refreshIntervalMinutes: autoConfig.refreshIntervalMinutes || 30 }, null, null);
+                setAutoRefresh({ path: pathInput, lastRefreshTime: Date.now(), refreshIntervalMinutes: autoConfig.refreshIntervalMinutes || 5 }, null, null);
             } else {
                 alert("Could not refresh from the provided path. Please re-select the file.");
             }
@@ -194,29 +215,25 @@ export function AutoLoadSettingsDialog({ open, onClose }: AutoLoadSettingsDialog
                 <Button
                     variant="outlined"
                     onClick={async () => {
-                        // If user modified the path explicitly, attempt to load it and drop old handles
-                        if (pathInput && pathInput !== autoConfig.path) {
-                            const success = await parseAndLoadDirectPath(pathInput);
-                            if (success) {
-                                setAutoRefresh({ path: pathInput, lastRefreshTime: Date.now(), refreshIntervalMinutes: autoConfig.refreshIntervalMinutes || 30 }, null, null);
-                                onClose();
-                            } else {
-                                alert("Failed to read the file at that path natively. Ensure the path is correct or try using 'Browse'.");
-                            }
+                        if (!pathInput) {
+                            onClose();
+                            return;
                         }
-                        // If they didn't modify it but we don't have a handle yet (e.g. they opened, pasted earlier, and reopened to hit Apply)
-                        else if (pathInput && !fileRef && !fileHandle) {
-                            const success = await parseAndLoadDirectPath(pathInput);
+
+                        let success = false;
+
+                        if (pathInput !== autoConfig.path) {
+                            success = await parseAndLoadDirectPath(pathInput);
                             if (success) {
-                                setAutoRefresh({ path: pathInput, lastRefreshTime: Date.now(), refreshIntervalMinutes: autoConfig.refreshIntervalMinutes || 30 }, null, null);
-                                onClose();
-                            } else {
-                                alert("Failed to read the file at that path natively. Ensure the path is correct or try using 'Browse'.");
+                                setAutoRefresh({ path: pathInput, lastRefreshTime: Date.now(), refreshIntervalMinutes: autoConfig.refreshIntervalMinutes || 5 }, null, null);
                             }
+                        } else {
+                            // They didn't alter the path. If they browsed, it was already applied by handleFileSelect.
+                            // If they just opened and closed, no harm in closing.
+                            success = true;
                         }
-                        // Otherwise, just save the state and close
-                        else {
-                            setAutoRefresh({ ...autoConfig, path: pathInput }, fileRef, fileHandle);
+
+                        if (success) {
                             onClose();
                         }
                     }}

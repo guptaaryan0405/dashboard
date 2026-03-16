@@ -36,7 +36,7 @@ export function Layout({ children, onToggleTheme }: LayoutProps) {
 
     return (
         <Box sx={{ display: 'flex', minHeight: '100vh', width: '100%' }}>
-            <Header onToggleTheme={onToggleTheme} onOpenAdd={() => setAddModalOpen(true)} />
+            <Header onToggleTheme={onToggleTheme} />
             <Box component="main" sx={{ flexGrow: 1, p: 3, backgroundColor: 'background.default', mt: 8 }}>
                 {children}
             </Box>

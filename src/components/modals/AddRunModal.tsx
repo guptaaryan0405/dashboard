@@ -15,7 +15,7 @@ interface AddRunModalProps {
     existingRunId?: string | null;
 }
 
-const STAGES: StageName[] = ['PRECTS', 'CTS', 'POSTROUTE'];
+const STAGES: StageName[] = ['PRECTS', 'CTS', 'ROUTE', 'POSTROUTE'];
 
 export function AddRunModal({ open, onClose, existingRunId }: AddRunModalProps) {
     const { runs, addRun, updateRun } = useRunStore();
@@ -26,27 +26,27 @@ export function AddRunModal({ open, onClose, existingRunId }: AddRunModalProps) 
 
     // Multi-Stage State
     const [stageLogs, setStageLogs] = useState<Record<StageName, string>>({
-        PRECTS: '', CTS: '', POSTROUTE: ''
+        PRECTS: '', CTS: '', ROUTE: '', POSTROUTE: ''
     });
 
     // Future expansion for manual entry like Area/Leakage/Timing overrides
     const [stageArea, setStageArea] = useState<Record<StageName, string>>({
-        PRECTS: '', CTS: '', POSTROUTE: ''
+        PRECTS: '', CTS: '', ROUTE: '', POSTROUTE: ''
     });
     const [stageLeakage, setStageLeakage] = useState<Record<StageName, string>>({
-        PRECTS: '', CTS: '', POSTROUTE: ''
+        PRECTS: '', CTS: '', ROUTE: '', POSTROUTE: ''
     });
     const [stageWns, setStageWns] = useState<Record<StageName, string>>({
-        PRECTS: '', CTS: '', POSTROUTE: ''
+        PRECTS: '', CTS: '', ROUTE: '', POSTROUTE: ''
     });
     const [stageTns, setStageTns] = useState<Record<StageName, string>>({
-        PRECTS: '', CTS: '', POSTROUTE: ''
+        PRECTS: '', CTS: '', ROUTE: '', POSTROUTE: ''
     });
     const [stageStatus, setStageStatus] = useState<Record<StageName, string>>({
-        PRECTS: '', CTS: '', POSTROUTE: ''
+        PRECTS: '', CTS: '', ROUTE: '', POSTROUTE: ''
     });
     const [stageRuntime, setStageRuntime] = useState<Record<StageName, string>>({
-        PRECTS: '', CTS: '', POSTROUTE: ''
+        PRECTS: '', CTS: '', ROUTE: '', POSTROUTE: ''
     });
 
     useEffect(() => {
@@ -60,14 +60,14 @@ export function AddRunModal({ open, onClose, existingRunId }: AddRunModalProps) 
 
                     // For editing, we don't try to reverse-engineer the log string. 
                     // We just allow them to paste NEW logs to overwrite, or input manual metrics.
-                    setStageLogs({ PRECTS: '', CTS: '', POSTROUTE: '' });
+                    setStageLogs({ PRECTS: '', CTS: '', ROUTE: '', POSTROUTE: '' });
 
-                    const initArea = { PRECTS: '', CTS: '', POSTROUTE: '' };
-                    const initLeakage = { PRECTS: '', CTS: '', POSTROUTE: '' };
-                    const initWns = { PRECTS: '', CTS: '', POSTROUTE: '' };
-                    const initTns = { PRECTS: '', CTS: '', POSTROUTE: '' };
-                    const initStatus = { PRECTS: '', CTS: '', POSTROUTE: '' };
-                    const initRuntime = { PRECTS: '', CTS: '', POSTROUTE: '' };
+                    const initArea = { PRECTS: '', CTS: '', ROUTE: '', POSTROUTE: '' };
+                    const initLeakage = { PRECTS: '', CTS: '', ROUTE: '', POSTROUTE: '' };
+                    const initWns = { PRECTS: '', CTS: '', ROUTE: '', POSTROUTE: '' };
+                    const initTns = { PRECTS: '', CTS: '', ROUTE: '', POSTROUTE: '' };
+                    const initStatus = { PRECTS: '', CTS: '', ROUTE: '', POSTROUTE: '' };
+                    const initRuntime = { PRECTS: '', CTS: '', ROUTE: '', POSTROUTE: '' };
 
                     STAGES.forEach(stage => {
                         const stageData = runToEdit.stages[stage];
@@ -207,13 +207,13 @@ export function AddRunModal({ open, onClose, existingRunId }: AddRunModalProps) 
         setRunTag('');
         setFrequency('');
         setParentId('none');
-        setStageLogs({ PRECTS: '', CTS: '', POSTROUTE: '' });
-        setStageArea({ PRECTS: '', CTS: '', POSTROUTE: '' });
-        setStageLeakage({ PRECTS: '', CTS: '', POSTROUTE: '' });
-        setStageWns({ PRECTS: '', CTS: '', POSTROUTE: '' });
-        setStageTns({ PRECTS: '', CTS: '', POSTROUTE: '' });
-        setStageStatus({ PRECTS: '', CTS: '', POSTROUTE: '' });
-        setStageRuntime({ PRECTS: '', CTS: '', POSTROUTE: '' });
+        setStageLogs({ PRECTS: '', CTS: '', ROUTE: '', POSTROUTE: '' });
+        setStageArea({ PRECTS: '', CTS: '', ROUTE: '', POSTROUTE: '' });
+        setStageLeakage({ PRECTS: '', CTS: '', ROUTE: '', POSTROUTE: '' });
+        setStageWns({ PRECTS: '', CTS: '', ROUTE: '', POSTROUTE: '' });
+        setStageTns({ PRECTS: '', CTS: '', ROUTE: '', POSTROUTE: '' });
+        setStageStatus({ PRECTS: '', CTS: '', ROUTE: '', POSTROUTE: '' });
+        setStageRuntime({ PRECTS: '', CTS: '', ROUTE: '', POSTROUTE: '' });
     };
 
     const handleClose = () => {

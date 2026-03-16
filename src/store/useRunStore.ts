@@ -41,14 +41,14 @@ export const useRunStore = create<RunState>()(
             runs: [],
             selectedRunId: null,
             autoConfig: {
-                path: '/home/<user>/dashboard_input_json/dashboard_session_export.json',
+                path: '',
                 lastRefreshTime: null,
-                refreshIntervalMinutes: 30
+                refreshIntervalMinutes: 5
             },
             fileRef: null,
             fileHandle: null,
             filters: {
-                stages: { PRECTS: true, CTS: true, POSTROUTE: true },
+                stages: { PRECTS: true, CTS: true, ROUTE: true, POSTROUTE: true },
                 pathGroups: { all: true, reg2reg: true }
             },
             addRun: (run) => set((state) => ({ runs: [...state.runs, run] })),
@@ -73,7 +73,7 @@ export const useRunStore = create<RunState>()(
         {
             name: 'dashboard-run-storage',
             partialize: (state) => Object.fromEntries(
-                Object.entries(state).filter(([key]) => !['fileRef', 'fileHandle'].includes(key))
+                Object.entries(state).filter(([key]) => !['fileRef', 'fileHandle', 'runs'].includes(key))
             ),
         }
     )

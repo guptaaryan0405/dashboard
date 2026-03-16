@@ -15,7 +15,7 @@ interface AddChartModalProps {
 }
 
 const METRICS = ['WNS', 'TNS', 'FEP', 'area_mm2', 'leakage_mw', 'drc_count', 'flow_cputime_s', 'flow_realtime_s'];
-const STAGES: StageName[] = ['PRECTS', 'CTS', 'POSTROUTE'];
+const STAGES: StageName[] = ['PRECTS', 'CTS', 'ROUTE', 'POSTROUTE'];
 
 export function AddChartModal({ open, onClose, onAdd, initialSelectedRunIds }: AddChartModalProps) {
     const [metric, setMetric] = useState<string>('WNS');
