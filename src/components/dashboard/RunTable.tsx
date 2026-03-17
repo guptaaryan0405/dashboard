@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-    Paper, Box, Typography, Menu, MenuItem, Divider, IconButton,
+    Paper, Box, Typography, Menu, MenuItem, Divider, IconButton, Button,
     ToggleButtonGroup, ToggleButton, Checkbox, Tooltip, Popover, TextField, Badge
 } from '@mui/material';
 import React from 'react';
-import { Delete, Insights, CompareArrows, FilterList, Visibility, Deselect } from '@mui/icons-material';
+import { Insights, CompareArrows, FilterList, Visibility, Deselect, VisibilityOff } from '@mui/icons-material';
 import { useRunStore } from '../../store/useRunStore';
 import type { StageName, Run, StageData } from '../../types';
 import { PathGroupDialog } from '../modals/PathGroupDialog';
@@ -40,13 +40,14 @@ export function RunTable({ onEditRun }: RunTableProps) {
     // Phase 7 UX
     const [viewMode, setViewMode] = useState<'timing' | 'run_times' | 'area' | 'power' | 'drcs' | 'cell_count'>('timing');
     const [selectedRunIds, setSelectedRunIds] = useState<string[]>([]);
-    const { deleteRun } = useRunStore();
+    const { deleteRun: _deleteRun } = useRunStore();
 
     // Table Filters
     const [filterAnchorEl, setFilterAnchorEl] = useState<HTMLButtonElement | null>(null);
     const [tagFilter, setTagFilter] = useState('');
     const [freqFilter, setFreqFilter] = useState('');
     const [viewOnlyFilter, setViewOnlyFilter] = useState('');
+    const [hideFilter, setHideFilter] = useState('');
 
     const handleSetViewOnly = () => {
         const selectedRuns = selectedRunIds.map(id => runs.find(r => r.id === id)?.run_tag).filter(Boolean);
@@ -88,9 +89,12 @@ export function RunTable({ onEditRun }: RunTableProps) {
 
     const isSelected = (id: string) => selectedRunIds.indexOf(id) !== -1;
 
-    const handleDeleteSelected = () => {
-        if (window.confirm(`Delete ${selectedRunIds.length} runs permanently?`)) {
-            selectedRunIds.forEach(id => deleteRun(id));
+    const handleHideSelected = () => {
+        const selectedRuns = selectedRunIds.map(id => runs.find(r => r.id === id)?.run_tag).filter(Boolean);
+        if (selectedRuns.length > 0) {
+            const existing = hideFilter.trim();
+            const newTags = existing ? `${existing}, ${selectedRuns.join(', ')}` : selectedRuns.join(', ');
+            setHideFilter(newTags);
             setSelectedRunIds([]);
         }
     };
@@ -194,80 +198,87 @@ export function RunTable({ onEditRun }: RunTableProps) {
         displayRuns.sort((a, b) => getLatestTimestamp(b) - getLatestTimestamp(a));
     }
 
+    // Apply hide filter
+    if (hideFilter.trim() !== '') {
+        const hideTags = hideFilter.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+        if (hideTags.length > 0) {
+            displayRuns = displayRuns.filter(r => !hideTags.includes(r.run_tag.toLowerCase()));
+        }
+    }
+
     const numSelected = selectedRunIds.length;
-    const activeFilterCount = (tagFilter ? 1 : 0) + (freqFilter ? 1 : 0) + (viewOnlyFilter ? 1 : 0);
+    const activeFilterCount = (tagFilter ? 1 : 0) + (freqFilter ? 1 : 0) + (viewOnlyFilter ? 1 : 0) + (hideFilter ? 1 : 0);
 
     return (
         <Box sx={{ width: '100%', mb: 4 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                {numSelected > 0 ? (
-                    <Paper
-                        elevation={2}
-                        sx={{
-                            display: 'flex', alignItems: 'center', px: 2, py: 1,
-                            backgroundColor: 'primary.light', width: '100%'
-                        }}
-                    >
-                        <Typography sx={{ flex: '1 1 100%', color: 'primary.contrastText' }} variant="subtitle1" component="div">
-                            {numSelected} runs selected
-                        </Typography>
-
-                        <Tooltip title="Generate Graph">
-                            <IconButton onClick={() => setAddChartModalOpen(true)} sx={{ color: 'primary.contrastText' }}>
-                                <Insights />
-                            </IconButton>
-                        </Tooltip>
-                        <Tooltip title="View Only Selected">
-                            <IconButton onClick={handleSetViewOnly} sx={{ color: 'primary.contrastText' }}>
-                                <Visibility />
-                            </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Compare Intermediate Runs">
-                            <IconButton onClick={() => setCompareRunsDialogOpen(true)} sx={{ color: 'primary.contrastText' }}>
-                                <CompareArrows />
-                            </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Clear Selection">
-                            <IconButton onClick={() => setSelectedRunIds([])} sx={{ color: 'primary.contrastText' }}>
-                                <Deselect />
-                            </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Delete">
-                            <IconButton onClick={handleDeleteSelected} sx={{ color: 'primary.contrastText' }}>
-                                <Delete />
-                            </IconButton>
-                        </Tooltip>
-                    </Paper>
-                ) : (
-                    <>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <Typography variant="h6">Run Data Table</Typography>
-                            <Tooltip title="Filter Runs">
-                                <IconButton onClick={(e) => setFilterAnchorEl(e.currentTarget)} size="small">
-                                    <Badge badgeContent={activeFilterCount} color="primary">
-                                        <FilterList />
-                                    </Badge>
-                                </IconButton>
-                            </Tooltip>
-                        </Box>
-                        <ToggleButtonGroup
-                            size="small"
-                            color="primary"
-                            value={viewMode}
-                            exclusive
-                            onChange={handleViewModeChange}
-                            aria-label="View Mode"
-                        >
-                            <ToggleButton value="timing" aria-label="timing">Timing</ToggleButton>
-                            <ToggleButton value="run_times" aria-label="run_times">Run Times</ToggleButton>
-                            <ToggleButton value="area" aria-label="area">Area</ToggleButton>
-                            <ToggleButton value="power" aria-label="power">Power</ToggleButton>
-                            <ToggleButton value="drcs" aria-label="drcs">DRCs</ToggleButton>
-                            <ToggleButton value="cell_count" aria-label="cell_count">Cell Count</ToggleButton>
-                        </ToggleButtonGroup>
-                    </>
-                )}
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Typography variant="h6">Run Data Table</Typography>
+                    <Tooltip title="Filter Runs">
+                        <IconButton onClick={(e) => setFilterAnchorEl(e.currentTarget)} size="small">
+                            <Badge badgeContent={activeFilterCount} color="primary">
+                                <FilterList />
+                            </Badge>
+                        </IconButton>
+                    </Tooltip>
+                </Box>
+                <ToggleButtonGroup
+                    size="small"
+                    color="primary"
+                    value={viewMode}
+                    exclusive
+                    onChange={handleViewModeChange}
+                    aria-label="View Mode"
+                >
+                    <ToggleButton value="timing" aria-label="timing">Timing</ToggleButton>
+                    <ToggleButton value="run_times" aria-label="run_times">Run Times</ToggleButton>
+                    <ToggleButton value="area" aria-label="area">Area</ToggleButton>
+                    <ToggleButton value="power" aria-label="power">Power</ToggleButton>
+                    <ToggleButton value="drcs" aria-label="drcs">DRCs</ToggleButton>
+                    <ToggleButton value="cell_count" aria-label="cell_count">Cell Count</ToggleButton>
+                </ToggleButtonGroup>
             </Box>
+            {numSelected > 0 && (
+                <Paper
+                    elevation={2}
+                    sx={{
+                        display: 'flex', alignItems: 'center', px: 2, py: 1, mb: 1,
+                        backgroundColor: 'primary.light', width: '100%'
+                    }}
+                >
+                    <Tooltip title="Clear Selection">
+                        <IconButton onClick={() => setSelectedRunIds([])} sx={{ color: 'primary.contrastText' }} size="small">
+                            <Deselect />
+                        </IconButton>
+                    </Tooltip>
+                    <Typography sx={{ color: 'primary.contrastText', whiteSpace: 'nowrap', ml: 1 }} variant="subtitle1" component="div">
+                        {numSelected} runs selected
+                    </Typography>
+
+                    <Box sx={{ flex: '1 1 100%' }} />
+
+                    <Tooltip title="Generate Graph">
+                        <IconButton onClick={() => setAddChartModalOpen(true)} sx={{ color: 'primary.contrastText' }}>
+                            <Insights />
+                        </IconButton>
+                    </Tooltip>
+                    <Tooltip title="View Only Selected">
+                        <IconButton onClick={handleSetViewOnly} sx={{ color: 'primary.contrastText' }}>
+                            <Visibility />
+                        </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Compare Intermediate Runs">
+                        <IconButton onClick={() => setCompareRunsDialogOpen(true)} sx={{ color: 'primary.contrastText' }}>
+                            <CompareArrows />
+                        </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Hide Selected Runs">
+                        <IconButton onClick={handleHideSelected} sx={{ color: 'primary.contrastText' }}>
+                            <VisibilityOff />
+                        </IconButton>
+                    </Tooltip>
+                </Paper>
+            )}
 
             <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 'calc(100vh - 200px)' }}>
                 <Table stickyHeader size="small" sx={{ minWidth: 800, tableLayout: 'auto' }}>
@@ -585,7 +596,10 @@ export function RunTable({ onEditRun }: RunTableProps) {
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
             >
                 <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2, width: 250 }}>
-                    <Typography variant="subtitle2" fontWeight="bold">Table Filters</Typography>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography variant="subtitle2" fontWeight="bold">Table Filters</Typography>
+                        <Button size="small" onClick={() => { setTagFilter(''); setFreqFilter(''); setViewOnlyFilter(''); setHideFilter(''); }}>Clear All</Button>
+                    </Box>
                     <TextField
                         size="small"
                         label="Run Tag (Regex)"
@@ -606,6 +620,13 @@ export function RunTable({ onEditRun }: RunTableProps) {
                         value={viewOnlyFilter}
                         onChange={(e) => setViewOnlyFilter(e.target.value)}
                         placeholder="e.g. run1, run2, run3"
+                    />
+                    <TextField
+                        size="small"
+                        label="Hide (Comma separated tags)"
+                        value={hideFilter}
+                        onChange={(e) => setHideFilter(e.target.value)}
+                        placeholder="e.g. run4, run5"
                     />
                 </Box>
             </Popover>

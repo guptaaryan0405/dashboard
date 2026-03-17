@@ -34,7 +34,7 @@ export function PathGroupDialog({ runId, onClose }: PathGroupDialogProps) {
                             <TableRow>
                                 <TableCell rowSpan={2} sx={{ fontWeight: 'bold', backgroundColor: 'action.hover' }}>Stage</TableCell>
                                 {columns.map(pg => (
-                                    <TableCell key={pg} colSpan={2} align="center" sx={{ borderLeft: '1px solid', borderColor: 'divider', fontWeight: 'bold', backgroundColor: 'action.hover' }}>
+                                    <TableCell key={pg} colSpan={3} align="center" sx={{ borderLeft: '1px solid', borderColor: 'divider', fontWeight: 'bold', backgroundColor: 'action.hover' }}>
                                         {pg}
                                     </TableCell>
                                 ))}
@@ -44,6 +44,7 @@ export function PathGroupDialog({ runId, onClose }: PathGroupDialogProps) {
                                     <React.Fragment key={`${pg}-headers`}>
                                         <TableCell align="center" sx={{ borderLeft: '1px solid', borderColor: 'divider', backgroundColor: 'action.hover', fontSize: '0.8rem' }}>WNS</TableCell>
                                         <TableCell align="center" sx={{ borderColor: 'divider', backgroundColor: 'action.hover', fontSize: '0.8rem' }}>TNS</TableCell>
+                                        <TableCell align="center" sx={{ borderColor: 'divider', backgroundColor: 'action.hover', fontSize: '0.8rem' }}>FEP</TableCell>
                                     </React.Fragment>
                                 ))}
                             </TableRow>
@@ -59,12 +60,15 @@ export function PathGroupDialog({ runId, onClose }: PathGroupDialogProps) {
                                             const metrics = run.stages[stage]?.views?.[pg];
                                             const wns = metrics?.WNS ?? '—';
                                             const tns = metrics?.TNS ?? '—';
+                                            const fep = metrics?.violating_paths ?? metrics?.FEP ?? '—';
                                             const isWnsNegative = typeof wns === 'number' && wns < 0;
                                             const isTnsNegative = typeof tns === 'number' && tns < 0;
+                                            const isFepPositive = typeof fep === 'number' && fep > 0;
                                             return (
                                                 <React.Fragment key={`${stage}-${pg}`}>
                                                     <TableCell align="center" sx={{ borderLeft: '1px solid', borderColor: 'divider', color: isWnsNegative ? 'error.main' : 'inherit' }}>{wns}</TableCell>
                                                     <TableCell align="center" sx={{ borderColor: 'divider', color: isTnsNegative ? 'error.main' : 'inherit' }}>{tns}</TableCell>
+                                                    <TableCell align="center" sx={{ borderColor: 'divider', color: isFepPositive ? 'error.main' : 'inherit', fontWeight: isFepPositive ? 'medium' : 'normal' }}>{fep}</TableCell>
                                                 </React.Fragment>
                                             )
                                         })}
